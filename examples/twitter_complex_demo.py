@@ -54,12 +54,12 @@ def print_db_summary(db_path):
     print(f"\n[FOLLOWS] {cur.fetchone()['cnt']} follow relationships created")
 
     cur.execute("""
-        SELECT action_type, COUNT(*) as cnt FROM trace
-        GROUP BY action_type ORDER BY cnt DESC
+        SELECT action, COUNT(*) as cnt FROM trace
+        GROUP BY action ORDER BY cnt DESC
     """)
     print(f"\n[ACTION BREAKDOWN]")
     for a in cur.fetchall():
-        print(f"  {a['action_type']}: {a['cnt']}")
+        print(f"  {a['action']}: {a['cnt']}")
 
     conn.close()
 
@@ -78,7 +78,7 @@ async def main():
         available_actions=available_actions,
     )
 
-    db_path = "./data/twitter_complex_demo.db"
+    db_path = "./data/twitter_50rounds.db"
     os.environ["OASIS_DB_PATH"] = os.path.abspath(db_path)
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -111,17 +111,12 @@ async def main():
             action_args={"content": "Hot take: AI won't replace engineers who use AI. Skilled devs are more in demand than ever. #AI #Coding"})
     })
 
-    print("Step 4: All agents react...")
-    await env.step({
-        agent: LLMAction()
-        for _, agent in env.agent_graph.get_agents()
-    })
-
-    print("Step 5: Final round...")
-    await env.step({
-        agent: LLMAction()
-        for _, agent in env.agent_graph.get_agents()
-    })
+    for i in range(4, 51):
+        print(f"Step {i}: All agents react...")
+        await env.step({
+            agent: LLMAction()
+            for _, agent in env.agent_graph.get_agents()
+        })
 
     await env.close()
     print_db_summary(db_path)
