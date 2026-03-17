@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sqlite3
+from pathlib import Path
 
 from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
@@ -12,7 +13,8 @@ from oasis import (ActionType, LLMAction, ManualAction,
 # Use only first 10 rows of the CSV
 import pandas as pd
 SRC_CSV = "data/twitter_dataset/anonymous_topic_200_1h/False_Business_0.csv"
-SLIM_CSV = "/tmp/oasis_10agents.csv"
+SLIM_CSV = "data/oasis_10agents.csv"
+os.makedirs(os.path.dirname(SLIM_CSV), exist_ok=True)
 df = pd.read_csv(SRC_CSV).head(10)
 df.to_csv(SLIM_CSV, index=False)
 
@@ -67,7 +69,7 @@ def print_db_summary(db_path):
 async def main():
     model = ModelFactory.create(
         model_platform=ModelPlatformType.OPENROUTER,
-        model_type=ModelType.OPENROUTER_STEPFUN_3_5_Flash,
+        model_type=ModelType.OPENROUTER_LLAMA_3_1_70B,
     )
 
     available_actions = ActionType.get_default_twitter_actions()
@@ -78,11 +80,13 @@ async def main():
         available_actions=available_actions,
     )
 
-    db_path = "./data/twitter_50rounds.db"
-    os.environ["OASIS_DB_PATH"] = os.path.abspath(db_path)
+    # 与 twitter_market_io 统一：始终使用 examples/data/twitter_50rounds.db
+    _examples_dir = Path(__file__).resolve().parent
+    db_path = str(_examples_dir / "data" / "twitter_50rounds.db")
+    os.environ["OASIS_DB_PATH"] = db_path
     if os.path.exists(db_path):
         os.remove(db_path)
-    os.makedirs("./data", exist_ok=True)
+    _examples_dir.joinpath("data").mkdir(parents=True, exist_ok=True)
 
     env = oasis.make(
         agent_graph=agent_graph,
